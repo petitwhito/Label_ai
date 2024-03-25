@@ -4,6 +4,9 @@ import torch.nn as nn
 import torch.optim as optim
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
+import gender_guesser.detector as gender
+
+# Basically same thing as Gender_Basic.py but this time, it uses the existing model in Existing_Model.py to catch errors
 
 # Extract data from CSV file
 
@@ -54,11 +57,11 @@ Y_train_tensor = torch.Tensor(Y_train.values).view(-1, 1)
 # Training the model
 num_epochs = 200
 for epoch in range(num_epochs):
-    # forward pass ??
+    # Forward pass
     y_pred = net(X_train_tensor)
     loss = criterion(y_pred, Y_train_tensor)
 
-    # backward and optimize ?
+    # Backward and optimize
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
@@ -72,7 +75,7 @@ for epoch in range(num_epochs):
 X_test_tensor = torch.Tensor(X_test_vec.toarray())
 Y_test_tensor = torch.Tensor(Y_test.values).view(-1, 1)
 
-# Testing the model to get the accuracy
+# Testing the model
 
 with torch.no_grad():
     y_pred = net(X_test_tensor)
@@ -81,11 +84,25 @@ with torch.no_grad():
     print('Test Accuracy: {:.4f}'.format(accuracy.item()))
 
 
-# Function called to give answer
+# Initialize gender detector
+detector = gender.Detector()
+
+def predict_online_model(name):
+    return detector.get_gender(name)
+
+# Using both AI's to predict gender !
 def predict_gender(name):
+    online_model_prediction = predict_online_model(name)
+    if online_model_prediction == "andy":
+        return "androgynous"
+    if online_model_prediction != "unknown":
+        return online_model_prediction
+
+    # First AI return unknown, let's use the other to give a real answer
     name = name.strip().lower()
     name_vec = vectorizer.transform([name])
     name_vec = torch.Tensor(name_vec.toarray())
+
     with torch.no_grad():
         y_pred = net(name_vec)
         gender = 1 if y_pred.item() > 0.5 else 0
